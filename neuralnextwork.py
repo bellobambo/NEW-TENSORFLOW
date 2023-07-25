@@ -5,8 +5,8 @@ import tensorflow as tf
 from tensorflow import keras
 import keras
 from keras import layers
-from tensorflow.keras.datasets import mnist
-
+from tensorflow import keras
+from keras.datasets import mnist
 # physical_devices = tf.config.list_physical_devices('GPU')
 # tf.config.experimental.set_memory_growth(physical_devices[0], True)
 
@@ -34,16 +34,7 @@ model.add(layers.Dense(256, activation='relu'))
 model.add(layers.Dense(10))
 
 
-model = keras.Model(inputs=model.inputs, outputs=[layer.output for layer in model.layers ])
 
-features = model.predict(x_train)
-
-for feature in features:
-    print(feature.shape)
-
-
-import sys
-sys.exit()
 
 
 # functional API(flexible)
