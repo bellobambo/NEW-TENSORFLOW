@@ -54,7 +54,7 @@ model = my_model()
 model.compile(
     loss=keras.losses.SparseCategoricalCrossentropy(from_logits=True),
     optimizer=keras.optimizers.Adam(learning_rate=3e-4),
-    metrics=["accuracy"],
+    metrics=["accuracy"]
 )
 
 model.fit(x_train, y_train, batch_size=64, epochs=150, verbose=2)
