@@ -50,7 +50,6 @@ def my_model():
     return model
 
 model = my_model()
-
 model.compile(
     loss=keras.losses.SparseCategoricalCrossentropy(from_logits=True),
     optimizer=keras.optimizers.Adam(learning_rate=3e-4),
