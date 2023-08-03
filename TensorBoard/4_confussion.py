@@ -7,18 +7,15 @@ import tensorflow as tf
 import matplotlib.pyplot as plt
 import numpy as np
 import tensorflow_datasets as tfds
-import sklearn.metrics
 
 from tensorflow import keras
 from tensorflow.keras import layers
-from tensorboard import program
 
-
-from utils import plot_to_image, image_grid
+from utils import get_confusion_matrix, plot_confusion_matrix
 
 # Make sure we don't get any GPU errors
-# physical_devices = tf.config.list_physical_devices("GPU")
-# tf.config.experimental.set_memory_growth(physical_devices[0], True)
+physical_devices = tf.config.list_physical_devices("GPU")
+tf.config.experimental.set_memory_growth(physical_devices[0], True)
 
 (ds_train, ds_test), ds_info = tfds.load(
     "cifar10",
@@ -44,9 +41,6 @@ def augment(image, label):
 
     image = tf.image.random_brightness(image, max_delta=0.1)
     image = tf.image.random_flip_left_right(image)
-
-    # matplotlib wants [0,1] values
-    image = tf.clip_by_value(image, clip_value_min=0, clip_value_max=1)
 
     return image, label
 
@@ -96,20 +90,35 @@ def get_model():
 
 
 model = get_model()
-num_epochs = 1
+num_epochs = 5
 loss_fn = keras.losses.SparseCategoricalCrossentropy(from_logits=True)
 optimizer = keras.optimizers.Adam(lr=0.001)
 acc_metric = keras.metrics.SparseCategoricalAccuracy()
-writer = tf.summary.create_file_writer("logs/train/")
-step = 0
+train_writer = tf.summary.create_file_writer("logs/train/")
+test_writer = tf.summary.create_file_writer("logs/test/")
+train_step = test_step = 0
 
 
 for epoch in range(num_epochs):
-    for batch_idx, (x, y) in enumerate(ds_train):
-        figure = image_grid(x, y, class_names)
+    confusion = np.zeros((len(class_names), len(class_names)))
 
-        with writer.as_default():
-            tf.summary.image(
-                "Visualize Images", plot_to_image(figure), step=step,
-            )
-            step += 1
+    # Iterate through training set
+    for batch_idx, (x, y) in enumerate(ds_train):
+        with tf.GradientTape() as tape:
+            y_pred = model(x, training=True)
+            loss = loss_fn(y, y_pred)
+
+        gradients = tape.gradient(loss, model.trainable_weights)
+        optimizer.apply_gradients(zip(gradients, model.trainable_weights))
+        acc_metric.update_state(y, y_pred)
+        confusion += get_confusion_matrix(y, y_pred, class_names)
+
+    with train_writer.as_default():
+        tf.summary.image(
+            "Confusion Matrix",
+            plot_confusion_matrix(confusion / batch_idx, class_names),
+            step=epoch,
+        )
+
+    # Reset accuracy in between epochs (and for testing and test)
+    acc_metric.reset_states()
